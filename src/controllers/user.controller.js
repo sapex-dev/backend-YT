@@ -1,16 +1,28 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import User from "../models/user.model.js";
+import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 
 const registerUser = asyncHandler(async (req, res) => {
+  console.log("☠️ ~ req.body:", req.body);
   const { fullName, username, email, password } = req.body;
+  console.log("☠️ ~ req.body:", req.files);
+  console.table("☠️ ~ req.body:", req.files.avatar);
 
-  console.log("username", username);
+  console.log(
+    "username",
+    username,
+    "email",
+    email,
+    "password",
+    password,
+    "fullName",
+    fullName
+  );
 
   if (
-    [fullName, username, email, password].some((value) => value?.trinm() === "")
+    [fullName, username, email, password].some((value) => value?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
@@ -24,7 +36,17 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  console.log("☠️ ~ avatarLocalPath:", avatarLocalPath);
+  //const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
@@ -43,10 +65,12 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     avatar: avatar?.url,
-    coverImage: coverImage?.url,
+    coverImage: coverImage?.url || "",
   });
 
-  const createdUser = User.findById(user._id).select("-password -refreshToken");
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
 
   if (!createdUser) {
     throw new ApiError(400, "Something went wrong while registering user");
